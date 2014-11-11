@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <style type="text/css">
+        #viewport {
+            border: 1px solid gray;
+            height: 640px;
+            width: 640px;
+        }
+    </style>
+</head>
+<body>
+<h1>Section</h1>
+
+<div id="viewport" style="clear:both"></div>
+<script type="text/javascript" src="../lib/threejs/build/three.js"></script>
+<script type="text/javascript" src="OrbitControls.js"></script>
+<script type="text/javascript">
+    // Set up the scene, camera, and renderer as global variables.
+    var scene, camera, renderer, viewport;
+    // Sets up the scene.
+    function init() {
+        // Create the scene and set the scene size.
+        scene = new THREE.Scene();
+        viewport = document.getElementById("viewport");
+        var WIDTH = 400, HEIGHT = 400;
+        // Create a renderer and add it to the DOM.
+        renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer.setSize(WIDTH, HEIGHT);
+        viewport.appendChild(renderer.domElement);
+        // Create a camera, zoom it out from the model a bit, and add it to the scene.
+        camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 20000);
+        camera.position.set(2, 2, 2);
+        scene.add(camera);
+        // Create an event listener that resizes the renderer with the browser window.
+        window.addEventListener('resize', function () {
+            renderer.setSize(WIDTH, HEIGHT);
+            camera.aspect = WIDTH / HEIGHT;
+            camera.updateProjectionMatrix();
+        });
+        // Set the background color of the scene.
+        // renderer.setClearColorHex(0x333F47, 1);
+        renderer.setClearColorHex(0xffffff, 1);
+
+        // Create a light, set its position, and add it to the scene.
+        var light1 = new THREE.PointLight(0xaaaaaa);
+        light1.position.set(-200, 300, -200);
+        scene.add(light1);
+
+        var light2 = new THREE.PointLight(0xffffff);
+        light2.position.set(200, 300, 200);
+        scene.add(light2);
+
+        // create wall geometry
+        var geometry1 = new THREE.BoxGeometry(1, 1, 0.1);
+        var material1 = new THREE.MeshLambertMaterial({color: 0x00ff00});
+        var cube1 = new THREE.Mesh(geometry1, material1);
+        cube1.position.set(0,0,0);
+        scene.add(cube1);
+
+        var geometry2 = new THREE.BoxGeometry(1, 1, 0.1);
+        var material2 = new THREE.MeshLambertMaterial({color: 0xff0000});
+        var cube2 = new THREE.Mesh(geometry2, material2);
+        cube2.position.set(0,0,0.3);
+        scene.add(cube2);
+
+        var geometry3 = new THREE.BoxGeometry(1, 1, 0.1);
+        var material3 = new THREE.MeshLambertMaterial({color: 0x0000ff});
+        var cube3 = new THREE.Mesh(geometry3, material3);
+        cube3.position.set(0,0,0.5);
+        scene.add(cube3);
+
+        // Add OrbitControls so that we can pan around with the mouse.
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+    }
+
+    // Renders the scene and updates the render as needed.
+    function animate() {
+        // Read more about requestAnimationFrame at http://www.paulirish.com/2011/requestanimationframe-for-smart-animating/
+        requestAnimationFrame(animate);
+        // Render the scene.
+        renderer.render(scene, camera);
+        controls.update();
+    }
+
+    // do it
+    init();
+    animate();
+</script>
+
+</body>
+</html>
