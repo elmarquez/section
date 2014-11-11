@@ -20,6 +20,25 @@
 <script type="text/javascript">
     // Set up the scene, camera, and renderer as global variables.
     var scene, camera, renderer, viewport;
+    // define the model to be build
+    var model = [
+        {
+            name:"weatherboard",
+            thickness: 0.02,
+            color: 'ff0000'
+        },
+        {
+            name: "building wrap",
+            thickness: 0.001,
+            color: 'ff0000'
+        },
+        {
+            name: "sheathing",
+            thickness: 0.01,
+            color: 'ff0000'
+        }
+    ];
+
     // Sets up the scene.
     function init() {
         // Create the scene and set the scene size.
@@ -53,24 +72,15 @@
         light2.position.set(200, 300, 200);
         scene.add(light2);
 
-        // create wall geometry
-        var geometry1 = new THREE.BoxGeometry(1, 1, 0.1);
-        var material1 = new THREE.MeshLambertMaterial({color: 0x00ff00});
-        var cube1 = new THREE.Mesh(geometry1, material1);
-        cube1.position.set(0,0,0);
-        scene.add(cube1);
-
-        var geometry2 = new THREE.BoxGeometry(1, 1, 0.1);
-        var material2 = new THREE.MeshLambertMaterial({color: 0xff0000});
-        var cube2 = new THREE.Mesh(geometry2, material2);
-        cube2.position.set(0,0,0.3);
-        scene.add(cube2);
-
-        var geometry3 = new THREE.BoxGeometry(1, 1, 0.1);
-        var material3 = new THREE.MeshLambertMaterial({color: 0x0000ff});
-        var cube3 = new THREE.Mesh(geometry3, material3);
-        cube3.position.set(0,0,0.5);
-        scene.add(cube3);
+        // create geometry
+        var last = 0;
+        model.forEach(function (element) {
+            var geom = new THREE.BoxGeometry(1, 1, element.thickness || 1);
+            var material = new THREE.MeshLambertMaterial({color: 0x00ff00});
+            var mesh = new THREE.Mesh(geom, material);
+            mesh.position.set(0,0,0);
+            scene.add(mesh);
+        });
 
         // Add OrbitControls so that we can pan around with the mouse.
         controls = new THREE.OrbitControls(camera, renderer.domElement);
