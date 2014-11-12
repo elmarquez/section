@@ -6,36 +6,59 @@
     <style type="text/css">
         #viewport {
             border: 1px solid gray;
-            height: 640px;
-            width: 640px;
+            height: 400px;
+            width: 400px;
         }
     </style>
+    <link type="text/css" href="../lib/OpenJSCAD.org/openjscad.css">
+    <script type="text/javascript" src="../lib/threejs/build/three.js"></script>
+    <script type="text/javascript" src="OrbitControls.js"></script>
+    <script type="text/javascript" src="../lib/OpenJSCAD.org/csg.js"></script>
+    <script type="text/javascript" src="../lib/OpenJSCAD.org/openjscad.js"></script>
 </head>
 <body>
 <h1>Section</h1>
 
 <div id="viewport" style="clear:both"></div>
-<script type="text/javascript" src="../lib/threejs/build/three.js"></script>
-<script type="text/javascript" src="OrbitControls.js"></script>
+<button onclick="explode()">Explode</button>
+<button onclick="collapse()">Collapse</button>
 <script type="text/javascript">
     // Set up the scene, camera, and renderer as global variables.
     var scene, camera, renderer, viewport;
     // define the model to be build
     var model = [
+        [
+            {
+                name: "brick",
+                height: 76,
+                width: 230,
+                thickness: 110,
+                color: 0xffff00,
+                transparency: 0.6,
+                type: "unit",
+                offset: [0, 10, 10, 0, 5, 0] // top, left, bottom, right, front, back
+            },
+            {
+                name: "mortar",
+                thickness: 10,
+                color: 0x00fff0,
+                offset: []
+            }
+        ],
         {
-            name:"weatherboard",
-            thickness: 0.02,
-            color: 'ff0000'
+            name: "air gap",
+            thickness: 25,
+            color: 0xff0000
         },
         {
             name: "building wrap",
-            thickness: 0.001,
-            color: 'ff0000'
+            thickness: 1,
+            color: 0x00ff00
         },
         {
             name: "sheathing",
-            thickness: 0.01,
-            color: 'ff0000'
+            thickness: 16,
+            color: 0x0000ff
         }
     ];
 
@@ -51,7 +74,7 @@
         viewport.appendChild(renderer.domElement);
         // Create a camera, zoom it out from the model a bit, and add it to the scene.
         camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 20000);
-        camera.position.set(2, 2, 2);
+        camera.position.set(100, 100, 200);
         scene.add(camera);
         // Create an event listener that resizes the renderer with the browser window.
         window.addEventListener('resize', function () {
@@ -59,6 +82,7 @@
             camera.aspect = WIDTH / HEIGHT;
             camera.updateProjectionMatrix();
         });
+
         // Set the background color of the scene.
         // renderer.setClearColorHex(0x333F47, 1);
         renderer.setClearColorHex(0xffffff, 1);
@@ -73,17 +97,76 @@
         scene.add(light2);
 
         // create geometry
-        var last = 0;
+        function createMaterial(item) {
+            var mat = new THREE.MeshPhongMaterial( { map: THREE.ImageUtils.loadTexture(item.material.texture) } );
+            return mat;
+        }
+
+        function createMesh(item) {
+            var geom, material;
+            var geom = new THREE.BoxGeometry(100, 100, item.thickness || 1);
+            if (item.color) {
+                material = new THREE.MeshLambertMaterial({color: item.color});
+            }
+            if (item.material) {
+
+            }
+            return new THREE.Mesh(geom, material);
+        }
+
+        var components = [], mesh, thickness = 0,
+                z = -100; // total thickness / 2
+        var defaultElement = {
+            name: "element",
+            height: 1000,
+            width: 1000,
+            thickness: 10,
+            color: 0xcccccc,
+            material: {},
+            transparency: 1.0,
+            type: "sheet",
+            offset: [0, 0, 0, 0, 0, 0] // top, left, bottom, right, front, back
+        };
         model.forEach(function (element) {
-            var geom = new THREE.BoxGeometry(1, 1, element.thickness || 1);
-            var material = new THREE.MeshLambertMaterial({color: 0x00ff00});
-            var mesh = new THREE.Mesh(geom, material);
-            mesh.position.set(0,0,0);
-            scene.add(mesh);
+            // set default values
+            if (Array.isArray(element)) {
+                // get the thickest element in the list
+                thickness = element.reduce(function (last, current) {
+                    if (last < current.thickness) {
+                        return current.thickness;
+                    }
+                    return last;
+                }, 0);
+                // create elements
+                components = [];
+                element.forEach(function (component) {
+                    mesh = createMesh(component);
+                    components.push(mesh);
+                });
+                // first element
+//                mesh.position.set(0, 0, 0);
+                // first element minus second element is the second element
+            } else {
+                thickness = element.thickness;
+                mesh = createMesh(element);
+                mesh.position.set(0, 0, z);
+                scene.add(mesh);
+            }
+            z += thickness || 0;
         });
+
+        // Origin coordinate marker
+        var dir = new THREE.Vector3(1, 0, 0);
+        var origin = new THREE.Vector3(0, 0, 0);
+        var length = 1;
+        var hex = 0xffff00;
+        var arrowHelper = new THREE.ArrowHelper(dir, origin, length, hex);
+        scene.add(arrowHelper);
 
         // Add OrbitControls so that we can pan around with the mouse.
         controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+        // Zoom to fit the object bounding box
     }
 
     // Renders the scene and updates the render as needed.
@@ -93,6 +176,14 @@
         // Render the scene.
         renderer.render(scene, camera);
         controls.update();
+    }
+
+    function collapse() {
+        console.dir('Not implemented yet');
+    }
+
+    function explode() {
+        console.dir('Not implemented yet');
     }
 
     // do it

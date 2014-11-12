@@ -35,3 +35,5 @@ node_modules
 # Other
 .idea/
 atlassian-ide-plugin.xml
+
+test/fixtures/lib
