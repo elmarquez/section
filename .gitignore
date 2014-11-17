@@ -36,4 +36,5 @@ node_modules
 .idea/
 atlassian-ide-plugin.xml
 
-test/fixtures/lib
+dist
+vendor

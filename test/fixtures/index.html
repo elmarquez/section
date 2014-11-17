@@ -2,28 +2,34 @@
 <html>
 <head lang="en">
     <meta charset="UTF-8">
-    <title></title>
+    <title>Section - Test</title>
     <style type="text/css">
+        body {
+            /*background: #333;*/
+            /*color: #eee;*/
+        }
         #viewport {
-            border: 1px solid gray;
-            height: 640px;
-            width: 800px;
+            bottom: 0;
+            position: absolute;
+            left: 200px;
+            right: 0;
         }
     </style>
-    <link type="text/css" href="../lib/OpenJSCAD.org/openjscad.css">
-    <script type="text/javascript" src="../lib/threejs/build/three.js"></script>
+    <link type="text/css" href="vendor/OpenJSCAD.org/openjscad.css">
+    <script type="text/javascript" src="vendor/threejs/build/three.js"></script>
     <script type="text/javascript" src="OrbitControls.js"></script>
-    <script type="text/javascript" src="../lib/OpenJSCAD.org/csg.js"></script>
-    <script type="text/javascript" src="../lib/OpenJSCAD.org/openjscad.js"></script>
+    <script type="text/javascript" src="vendor/OpenJSCAD.org/csg.js"></script>
+    <script type="text/javascript" src="vendor/OpenJSCAD.org/openjscad.js"></script>
+    <script type="text/javascript" src="js/section.js"></script>
 </head>
 <body>
 <h1>Section</h1>
 
 <div id="viewport" style="clear:both"></div>
-<button onclick="explode()">Explode</button>
-<button onclick="collapse()">Collapse</button>
+<button onclick="section.explode()">Explode</button>
+<button onclick="section.collapse()">Collapse</button>
 <script type="text/javascript">
-    // define the model to be build
+    // define the model to be built
     var model = [
         [
             {
@@ -33,7 +39,7 @@
                 thickness: 110,
                 color: 0xffff00,
                 material: {
-                    texture: 'brick-standard-red.jpg'
+                    texture: 'textures/brick-standard-red.jpg'
                 },
                 transparency: 0.6,
                 type: "unit",
@@ -42,7 +48,7 @@
             {
                 name: "mortar",
                 thickness: 10,
-                color: 0xaaaaaa,
+                color: 0xdddddd,
                 offset: []
             }
         ],
@@ -50,14 +56,15 @@
             name: "air gap",
             thickness: 25,
             color: 0xefefef,
-            opacity: 0.1
+            opacity: 0.01,
+            transparent: true
         },
         {
             name: "building wrap",
             thickness: 1,
             color: 0x888888,
             material: {
-                texture: 'tyvek.jpg'
+                texture: 'textures/tyvek.jpg'
             }
         },
         {
@@ -65,7 +72,7 @@
             thickness: 14,
             color: 0x0000ff,
             material: {
-                texture: 'plywood-douglas-fir.jpg'
+                texture: 'textures/plywood-douglas-fir.jpg'
             }
         },
         [
@@ -75,14 +82,14 @@
                 thickness: 89,
                 color: 0xcccccc,
                 material: {
-                    texture: 'lumber-douglas-fir.jpg'
+                    texture: 'textures/lumber-douglas-fir.jpg'
                 }
             },
             {
                 name: "insulation",
                 color: 0xcccccc,
                 material: {
-                    texture: 'insulation-batt-pink.jpg'
+                    texture: 'textures/insulation-batt-pink.jpg'
                 }
             }
         ],
@@ -91,15 +98,15 @@
             thickness: 10,
             color: 0x0000ff,
             material: {
-                texture: 'plasterboard.jpg'
+                texture: 'textures/plasterboard.jpg'
             }
         }
     ];
 
     // create visualization
-    Section.init("viewport", 640, 800);
-    Section.build(model);
-    Section.animate();
+    var section = new Section("viewport", 600, 800, model);
+    section.build();
+    section.animate();
 </script>
 
 </body>
