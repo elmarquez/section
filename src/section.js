@@ -6,6 +6,7 @@ var Section = function (element, height, width, model) {
   var instance = this;
 
   this.element = element;
+  this.fps = 30;
   this.height = height;
   this.model = model;
   this.width = width;
@@ -16,9 +17,11 @@ var Section = function (element, height, width, model) {
    * http://www.paulirish.com/2011/requestanimationframe-for-smart-animating/
    */
   this.animate = function () {
-    requestAnimationFrame(instance.animate);
-    instance.renderer.render(instance.scene, instance.camera);
-    instance.controls.update();
+    setTimeout(function() {
+      requestAnimationFrame(instance.animate);
+      instance.renderer.render(instance.scene, instance.camera);
+      instance.controls.update();
+    }, 1000 / instance.fps);
   };
 
   /**
