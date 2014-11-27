@@ -14,7 +14,7 @@
     "tests"
   ],
   "dependencies": {
-    "threejs": "*",
-    "OpenJSCAD.org": "git@github.com:Spiritdude/OpenJSCAD.org.git"
+    "ThreeCSG": "git@github.com:elmarquez/ThreeCSG.git",
+    "threejs": "*"
   }
 }

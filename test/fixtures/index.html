@@ -4,30 +4,22 @@
     <meta charset="UTF-8">
     <title>Section - Test</title>
     <style type="text/css">
-        body {
-            /*background: #333;*/
-            /*color: #eee;*/
-        }
         #viewport {
             bottom: 0;
             position: absolute;
-            left: 200px;
+            left: 0;
             right: 0;
+            top: 0;
         }
     </style>
-    <link type="text/css" href="vendor/OpenJSCAD.org/openjscad.css">
     <script type="text/javascript" src="vendor/threejs/build/three.js"></script>
-    <script type="text/javascript" src="OrbitControls.js"></script>
     <script type="text/javascript" src="vendor/OpenJSCAD.org/csg.js"></script>
     <script type="text/javascript" src="vendor/OpenJSCAD.org/openjscad.js"></script>
+    <script type="text/javascript" src="OrbitControls.js"></script>
     <script type="text/javascript" src="js/section.js"></script>
 </head>
 <body>
-<h1>Section</h1>
-
-<div id="viewport" style="clear:both"></div>
-<button onclick="section.explode()">Explode</button>
-<button onclick="section.collapse()">Collapse</button>
+<div id="viewport"></div>
 <script type="text/javascript">
     // define the model to be built
     var model = [
@@ -102,9 +94,8 @@
             }
         }
     ];
-
     // create visualization
-    var section = new Section("viewport", 600, 800, model);
+    var section = new Section("viewport", model);
     section.build();
     section.animate();
 </script>
