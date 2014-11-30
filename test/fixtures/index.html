@@ -36,7 +36,15 @@
                     color: 0xffff00,
                     texture: 'textures/brick-standard-red.jpg',
                 },
-                offset: [0, 10, 10, 0, 5, 0] // top, left, bottom, right, front, back
+                // top, left, bottom, right, front, back
+                offset: {
+                    top: 0,
+                    left: 10,
+                    bottom: 10,
+                    right: 0,
+                    front: 5,
+                    back: 0
+                }
             },
             {
                 name: "mortar",
@@ -46,7 +54,14 @@
                     color: 0xeaeaea,
                     texture: 'textures/concrete.jpg'
                 },
-                offset: []
+                offset: {
+                    top: 0,
+                    left: 0,
+                    bottom: 0,
+                    right: 0,
+                    front: 10,
+                    back: 10
+                }
             }
         ],
         {
@@ -92,7 +107,7 @@
                 thickness: 89,
                 material: {
                     color: 0xcccccc,
-                    opacity: 0.9,
+                    opacity: 0.7,
                     texture: 'textures/insulation-batt-pink.jpg',
                     transparent: true
                 }
@@ -108,7 +123,7 @@
         }
     ];
     // create visualization
-    var section = new Section("viewport", model, { debug: true });
+    var section = new Section("viewport", model, {debug: true});
     section.build();
     section.animate();
 </script>

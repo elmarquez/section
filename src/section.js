@@ -132,10 +132,20 @@ var Section = function (elementId, model, options) {
             });
             // boolean the subassemblies
             // TODO
+            // clip the mesh to the boundary
+            //var bounding_geometry = new THREE.BoxGeometry(instance.options.defaultElement.height, instance.options.defaultElement.width, obj.thickness);
+            //var bounding_mesh = new THREE.Mesh(bounding_geometry);
+            //var cube_bsp = new ThreeBSP(bounding_mesh);
+            //var subtract_bsp = cube_bsp.subtract(sphere_bsp);
+            //var result = subtract_bsp.toMesh( new THREE.MeshLambertMaterial({ shading: THREE.SmoothShading, map: THREE.ImageUtils.loadTexture('texture.png') }) );
+            //result.geometry.computeVertexNormals();
+            //scene.add(result);
             // group subassemblies
             mesh = new THREE.Object3D();
             members.forEach(function (member) {
-                mesh.add(member);
+                if (member) {
+                    mesh.add(member);
+                }
             });
         } else if (layer.type === 'unit') {
             mesh = instance.createUnitizedMesh(layer);
@@ -147,12 +157,29 @@ var Section = function (elementId, model, options) {
             // sheet or infill material
             mesh = instance.createUnitMesh(
                 layer.name,
-                instance.options.defaultElement.height,
                 instance.options.defaultElement.width,
-                layer.thickness,
+                instance.options.defaultElement.height,
+                layer.thickness - layer.offset.front - layer.offset.back,
                 layer.material
             );
+            // TODO offset positioning
         }
+        //// center the mesh in x and y
+        //var helper = new THREE.BoundingBoxHelper(mesh);
+        //try {
+        //    helper.update();
+        //    var x = (helper.box.max.x - helper.box.min.x) / 2;
+        //    var y = (helper.box.max.y - helper.box.min.y) / 2;
+        //    if (x === Infinity || x === -Infinity) {
+        //        x = 0;
+        //    }
+        //    if (y === Infinity || y === -Infinity) {
+        //        y = 0;
+        //    }
+        //    //mesh.position.set(x, y, 0);
+        //} catch (e) {
+        //    console.dir(e);
+        //}
         return mesh;
     };
 
@@ -165,41 +192,47 @@ var Section = function (elementId, model, options) {
         var cols, geom = new THREE.Object3D(), i, j, rows, unit;
         // TODO there should be a configuration option for layout algorithm
         // lay the units out in an x, y grid
-        rows = Math.ceil(instance.options.defaultElement.height / obj.height) + 1;
-        cols = Math.ceil(instance.options.defaultElement.width / obj.width) + 1;
+        rows = Math.ceil(instance.options.defaultElement.height / obj.height);
+        cols = Math.ceil(instance.options.defaultElement.width / obj.width);
         if (instance.options.debug) console.log('cols %s rows %s', cols, rows);
         for (i = 0; i < rows; i++) {
             for (j = 0; j < cols; j++) {
-                unit = instance.createUnitMesh(obj.name, obj.height, obj.width, obj.thickness, obj.material);
-                unit.position.x = (j * obj.width) + obj.offset;
+                unit = instance.createUnitMesh(obj.name,
+                    obj.width - obj.offset.left - obj.offset.right,
+                    obj.height - obj.offset.top - obj.offset.bottom,
+                    obj.thickness - obj.offset.front - obj.offset.back,
+                    obj.material);
+                unit.position.x = j * obj.width;
+                unit.position.y = i * obj.height;
                 geom.add(unit);
             }
         }
-        // clip the mesh to the boundary
-        var bounding_geometry = new THREE.BoxGeometry(instance.options.defaultElement.height, instance.options.defaultElement.width, obj.thickness);
-        var bounding_mesh = new THREE.Mesh(bounding_geometry);
-        //var cube_bsp = new ThreeBSP(bounding_mesh);
-
-        //var subtract_bsp = cube_bsp.subtract(sphere_bsp);
-        //var result = subtract_bsp.toMesh( new THREE.MeshLambertMaterial({ shading: THREE.SmoothShading, map: THREE.ImageUtils.loadTexture('texture.png') }) );
-        //result.geometry.computeVertexNormals();
-        //scene.add(result);
-
+        // TODO merge the mesh into a single object
+        // center the unit mesh
+        geom.position.set(
+            -(cols * obj.width / 2) + (obj.width * 0.5),
+            -(rows * obj.height / 2) + (obj.height * 0.5),
+            0);
+        if (instance.options.debug) {
+            var bbox = new THREE.BoundingBoxHelper(geom, 0xff0000);
+            bbox.update();
+            instance.scene.add(bbox);
+        }
         return geom;
     };
 
     /**
-     * Create mesh for a unitized element.
+     * Create unit mesh mesh.
      * @param name Model object name
-     * @param height Height
      * @param width Width
+     * @param height Height
      * @param thickness Thickness
      * @param material Material
      * @returns {THREE.Mesh}
      */
-    this.createUnitMesh = function (name, height, width, thickness, material) {
+    this.createUnitMesh = function (name, width, height, thickness, material) {
         var geom, mat, mesh;
-        geom = new THREE.BoxGeometry(height, width, thickness);
+        geom = new THREE.BoxGeometry(width, height, thickness);
         mat = instance.getMaterial(material);
         mesh = new THREE.Mesh(geom, mat);
         mesh.name = name;
@@ -217,6 +250,11 @@ var Section = function (elementId, model, options) {
         }
     };
 
+    /**
+     * Get material.
+     * @param material
+     * @returns {*}
+     */
     this.getMaterial = function (material) {
         var texture;
         if (material && material.texture) {
