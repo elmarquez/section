@@ -8,20 +8,36 @@
 var Section = function (elementId, model, options) {
     var instance = this;
 
-    instance.debug = false;
+    // TODO on init, make sure that nothing is selected
+
     instance.handlers = {}; // event handlers
     instance.model = model;
     instance.mouse = {x: 0, y: 0};
     instance.options = {
-        assemblyHeight: 500,
-        assemblyWidth: 500,
         background: 0xffffff,
+        debug: false,
+        defaultElement: {
+            name: "element",
+            constructionPlane: 90,                   // degrees around the X axis
+            height: 500, // only relevant if the element is unitized, otherwise default to model dimension
+            width: 500, // only relevant if the element is unitized, otherwise default to model dimension
+            thickness: 10, // when -1, then fill the layer with the parent thickness?
+            color: 0xcccccc,
+            opacity: 1.0,
+            material: null,
+            transparency: 1.0,
+            type: "sheet", // sheet, unit, frame
+            offset: {top: 0, left: 0, bottom: 0, right: 0, front: 0, back: 0}
+        },
         fps: 30,
+        selectedMaterialColor: 0xffff00,
+        selectedMaterialOpacity: 0.2,
         showOriginMarker: true
     };
     instance.raycaster = new THREE.Raycaster();
     instance.scene = null;
     instance.selected = null;
+    instance.unselectedOpacity = 0.2;
     instance.viewport = document.getElementById(elementId);
 
     instance.height = instance.viewport.clientHeight;
@@ -33,21 +49,6 @@ var Section = function (elementId, model, options) {
             instance.options[key] = options[key];
         });
     }
-
-    // a default construction element
-    this.defaultElement = {
-        name: "element",
-        constructionPlane: 90,                   // degrees around the X axis
-        height: instance.options.assemblyHeight, // only relevant if the element is unitized, otherwise default to model dimension
-        width: instance.options.assemblyWidth,   // only relevant if the element is unitized, otherwise default to model dimension
-        thickness: 10, // when -1, then fill the layer with the parent thickness?
-        color: 0xcccccc,
-        opacity: 1.0,
-        material: null,
-        transparency: 1.0,
-        type: "sheet", // sheet, unit, frame
-        offset: [0, 0, 0, 0, 0, 0] // top, left, bottom, right, front, back offset between repetitions within the layer
-    };
 
     /**
      * Renders the scene and updates the render at the specified maximum frame
@@ -65,6 +66,23 @@ var Section = function (elementId, model, options) {
     };
 
     /**
+     * Recursively apply default values to model.
+     * @param model Model
+     * @param defaults Model element default values
+     */
+    this.applyModelDefaults = function (model, defaults) {
+        if (Array.isArray(model)) {
+            model.forEach(function (element) {
+                instance.applyModelDefaults(element, defaults);
+            });
+        } else {
+            Object.keys(defaults).forEach(function(key) {
+               if (!model.hasOwnProperty(key)) model[key] = defaults[key];
+            });
+        }
+    };
+
+    /**
      * Build the visualization by iteratively adding each assembly layer on top
      * of the next, starting at the construction plane and working in the
      * positive axis dimension.
@@ -72,6 +90,8 @@ var Section = function (elementId, model, options) {
      */
     this.build = function () {
         var group = new THREE.Object3D(), mesh, thickness = 0, totalThickness = 0;
+        // apply default values to model properties that have not been specified
+        instance.applyModelDefaults(instance.model, instance.options.defaultElement);
         // add each assembly layer to the
         instance.model.forEach(function (layer) {
             // determine the layer thickness
@@ -99,98 +119,119 @@ var Section = function (elementId, model, options) {
     };
 
     /**
-     * Build the layer mesh.
+     * Build the layer representation.
      * @param layer Layer definition
      * @returns {THREE.Object3D}
      */
     this.buildLayer = function (layer) {
-        var group = new THREE.Object3D(), members = [], mesh;
-        // if the layer comprises a number of elements then build the layer as a
-        // single object
+        var members = [], mesh;
         if (Array.isArray(layer)) {
+            // generate mesh for each layer subassembly
             layer.forEach(function (subassembly) {
                 members.push(instance.buildLayer(subassembly));
             });
-            // subtract the parent assembly from the subassemblies
+            // boolean the subassemblies
             // TODO
-            // merge the assembles into a single object
+            // group subassemblies
             mesh = new THREE.Object3D();
-            group.add(mesh);
-            return group;
-        } else {
-            if (layer.type === 'unit') {
-                mesh = instance.createUnitizedMesh(layer);
-            } else if (layer.type === 'frame') {
-                //mesh = instance.createFrameMesh(layer);
-            } else {
-                mesh = instance.createSheetMesh(layer);
-            }
-            return mesh;
-        }
-    };
-
-    /**
-     * Create mesh for a sheet element.
-     * @param item Model item
-     * @returns {THREE.Mesh}
-     */
-    this.createSheetMesh = function (item) {
-        var geom, material, mesh, texture;
-        geom = new THREE.BoxGeometry(500, 500, item.thickness || 1);
-        if (item.color) {
-            material = new THREE.MeshLambertMaterial({
-                color: item.color,
-                transparent: true, // item.transparent || item.opacity < 1 ? true : false,
-                opacity: item.opacity || 1.0
+            members.forEach(function (member) {
+                mesh.add(member);
             });
+        } else if (layer.type === 'unit') {
+            mesh = instance.createUnitizedMesh(layer);
+        } else if (layer.type === 'frame') {
+            //mesh = instance.createFrameMesh(layer);
+        } else if (layer.type === 'void') {
+            mesh = new THREE.Object3D();
+        } else {
+            // sheet or infill material
+            mesh = instance.createUnitMesh(
+                layer.name,
+                instance.options.defaultElement.height,
+                instance.options.defaultElement.width,
+                layer.thickness,
+                layer.material
+            );
         }
-        if (item.material && item.material.texture) {
-            texture = THREE.ImageUtils.loadTexture(item.material.texture);
-            material = new THREE.MeshBasicMaterial({map: texture, side: THREE.DoubleSide});
-        }
-        mesh = new THREE.Mesh(geom, material);
-        mesh.name = item.name || '';
         return mesh;
     };
 
     /**
      * Create mesh for a sheet element.
-     * @param item Model item
+     * @param obj Model object
      * @returns {THREE.Mesh}
      */
-    this.createUnitizedMesh = function (item) {
-        var geom, material, texture;
+    this.createUnitizedMesh = function (obj) {
+        var cols, geom = new THREE.Object3D(), i, j, rows, unit;
+        // TODO there should be a configuration option for layout algorithm
+        // lay the units out in an x, y grid
+        rows = Math.ceil(instance.options.defaultElement.height / obj.height) + 1;
+        cols = Math.ceil(instance.options.defaultElement.width / obj.width) + 1;
+        if (instance.options.debug) console.log('cols %s rows %s', cols, rows);
+        for (i = 0; i < rows; i++) {
+            for (j = 0; j < cols; j++) {
+                unit = instance.createUnitMesh(obj.name, obj.height, obj.width, obj.thickness, obj.material);
+                unit.position.x = (j * obj.width) + obj.offset;
+                geom.add(unit);
+            }
+        }
+        // clip the mesh to the boundary
+        var bounding_geometry = new THREE.BoxGeometry(instance.options.defaultElement.height, instance.options.defaultElement.width, obj.thickness);
+        var bounding_mesh = new THREE.Mesh(bounding_geometry);
+        //var cube_bsp = new ThreeBSP(bounding_mesh);
 
-        // how many units fit into the volume?
-
-        //var cube_geometry = new THREE.CubeGeometry( 3, 3, 3 );
-        //var cube_mesh = new THREE.Mesh( cube_geometry );
-        //cube_mesh.position.x = -7;
-        //var cube_bsp = new ThreeBSP( cube_mesh );
-        //
-        //var sphere_geometry = new THREE.SphereGeometry( 1.8, 32, 32 );
-        //var sphere_mesh = new THREE.Mesh( sphere_geometry );
-        //sphere_mesh.position.x = -7;
-        //var sphere_bsp = new ThreeBSP( sphere_mesh );
-        //
-        //var subtract_bsp = cube_bsp.subtract( sphere_bsp );
+        //var subtract_bsp = cube_bsp.subtract(sphere_bsp);
         //var result = subtract_bsp.toMesh( new THREE.MeshLambertMaterial({ shading: THREE.SmoothShading, map: THREE.ImageUtils.loadTexture('texture.png') }) );
         //result.geometry.computeVertexNormals();
         //scene.add(result);
 
-        geom = new THREE.BoxGeometry(500, 500, item.thickness || 1);
-        if (item.color) {
-            material = new THREE.MeshLambertMaterial({
-                color: item.color,
-                transparent: true, // item.transparent || item.opacity < 1 ? true : false,
-                opacity: item.opacity || 1.0
-            });
+        return geom;
+    };
+
+    /**
+     * Create mesh for a unitized element.
+     * @param name Model object name
+     * @param height Height
+     * @param width Width
+     * @param thickness Thickness
+     * @param material Material
+     * @returns {THREE.Mesh}
+     */
+    this.createUnitMesh = function (name, height, width, thickness, material) {
+        var geom, mat, mesh;
+        geom = new THREE.BoxGeometry(height, width, thickness);
+        mat = instance.getMaterial(material);
+        mesh = new THREE.Mesh(geom, mat);
+        mesh.name = name;
+        return mesh;
+    };
+
+    /**
+     * Deselect layers.
+     * @param obj
+     */
+    this.deselect = function (obj) {
+        if (obj.type === 'Mesh') {
+            var tween = new TWEEN.Tween(obj.opacity).to(instance.options.unselectedOpacity, 1000);
+        } else if (obj.type === 'Object3D') {
         }
-        if (item.material && item.material.texture) {
-            texture = THREE.ImageUtils.loadTexture(item.material.texture);
-            material = new THREE.MeshBasicMaterial({map: texture, side: THREE.DoubleSide});
+    };
+
+    this.getMaterial = function (material) {
+        var texture;
+        if (material && material.texture) {
+            try {
+                texture = THREE.ImageUtils.loadTexture(material.texture);
+                return new THREE.MeshBasicMaterial({map: texture, side: THREE.DoubleSide});
+            } catch (e) {
+                console.log("ERROR: Could not load material %s", material.texture);
+            }
         }
-        return new THREE.Mesh(geom, material);
+        return new THREE.MeshLambertMaterial({
+            color: material.color,
+            transparent: true, // item.transparent || item.opacity < 1 ? true : false,
+            opacity: material.opacity || 1.0
+        });
     };
 
     this.init = function () {
@@ -235,12 +276,6 @@ var Section = function (elementId, model, options) {
             instance.scene.add(axisHelper);
         }
 
-        //var cubeGeometry = new THREE.CubeGeometry( 50, 50, 50 );
-        //var cubeMaterial = new THREE.MeshBasicMaterial( { color: 0x000088 } );
-        //cube = new THREE.Mesh( cubeGeometry, cubeMaterial );
-        //cube.position.set(0,0,0);
-        //instance.scene.add(cube);
-
         // listen for mouse actions
         document.addEventListener('mousemove', instance.onMouseMove, false);
 
@@ -281,13 +316,13 @@ var Section = function (elementId, model, options) {
     };
 
     /**
-     *
+     * Handle mouse move event.
      * @param event
      */
     this.onMouseMove = function (event) {
         event.preventDefault();
         instance.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        instance.mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+        instance.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     };
 
     /**
@@ -299,10 +334,9 @@ var Section = function (elementId, model, options) {
         var position = instance.camera.position;
         instance.raycaster.set(position, vector.sub(position).normalize());
         var intersects = instance.raycaster.intersectObjects(instance.scene.children, true);
-
         // if there is one (or more) intersections
         if (intersects.length > 0) {
-            if (instance.debug) console.dir(intersects);
+            if (instance.options.debug) console.dir(intersects[0]);
             // if the closest object intersected is not the currently stored intersection object
             if (intersects[0].object != instance.selected) {
                 // restore previous intersection object (if it exists) to its original color
@@ -313,9 +347,11 @@ var Section = function (elementId, model, options) {
                 // store color of closest object (for later restoration)
                 instance.selected.currentHex = instance.selected.material.color.getHex();
                 // set a new color for closest object
-                instance.selected.material.color.setHex(0xffff00);
+                instance.selected.material.color.setHex(instance.options.selectedMaterialColor);
             }
         } else {
+            // TODO set all object opacities to their default
+
             // restore previous intersection object (if it exists) to its original color
             if (instance.selected)
                 instance.selected.material.color.setHex(instance.selected.currentHex);

@@ -28,76 +28,87 @@
         [
             {
                 name: "brick",
+                type: "unit",
                 height: 76,
                 width: 230,
                 thickness: 110,
-                color: 0xffff00,
                 material: {
-                    texture: 'textures/brick-standard-red.jpg'
+                    color: 0xffff00,
+                    texture: 'textures/brick-standard-red.jpg',
                 },
-                transparency: 0.6,
-                type: "unit",
                 offset: [0, 10, 10, 0, 5, 0] // top, left, bottom, right, front, back
             },
             {
                 name: "mortar",
-                thickness: 10,
-                color: 0xdddddd,
+                type: 'infill',
+                thickness: 110,
+                material: {
+                    color: 0xeaeaea,
+                    texture: 'textures/concrete.jpg'
+                },
                 offset: []
             }
         ],
         {
             name: "air gap",
+            type: 'void',
             thickness: 25,
-            color: 0xefefef,
-            opacity: 0.01,
-            transparent: true
+            material: {
+                color: 0xefefef,
+                opacity: 0.01,
+                transparent: true
+            }
         },
         {
             name: "building wrap",
             thickness: 1,
-            color: 0x888888,
             material: {
+                color: 0x888888,
                 texture: 'textures/tyvek.jpg'
             }
         },
         {
             name: "sheathing",
             thickness: 14,
-            color: 0x0000ff,
             material: {
+                color: 0x0000ff,
                 texture: 'textures/plywood-douglas-fir.jpg'
             }
         },
         [
             {
                 name: "wood stud",
+                type: "frame",
                 width: 38,
                 thickness: 89,
-                color: 0xcccccc,
                 material: {
+                    color: 0xcccccc,
                     texture: 'textures/lumber-douglas-fir.jpg'
                 }
             },
             {
                 name: "insulation",
-                color: 0xcccccc,
+                type: 'infill',
+                thickness: 89,
                 material: {
-                    texture: 'textures/insulation-batt-pink.jpg'
+                    color: 0xcccccc,
+                    opacity: 0.9,
+                    texture: 'textures/insulation-batt-pink.jpg',
+                    transparent: true
                 }
             }
         ],
         {
             name: "plasterboard",
             thickness: 10,
-            color: 0x0000ff,
             material: {
+                color: 0x0000ff,
                 texture: 'textures/plasterboard.jpg'
             }
         }
     ];
     // create visualization
-    var section = new Section("viewport", model);
+    var section = new Section("viewport", model, { debug: true });
     section.build();
     section.animate();
 </script>

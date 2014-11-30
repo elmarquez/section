@@ -1,20 +1,28 @@
 {
   "name": "section",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "homepage": "https://github.com/elmarquez/section",
   "authors": [
-    "davismarques <dmarques@unimelb.edu.au>"
+    "Davis Marques <dmarques@unimelb.edu.au>"
   ],
   "license": "MIT",
   "ignore": [
     "**/.*",
+    "conf",
     "node_modules",
     "bower_components",
+    "src",
     "test",
-    "tests"
+    "vendor",
+    ".bowerrc",
+    ".gitignore",
+    ".travis.yml",
+    "Gruntfile.js",
+    "package.json"
   ],
   "dependencies": {
     "ThreeCSG": "git@github.com:elmarquez/ThreeCSG.git",
-    "threejs": "*"
+    "threejs": "^0.69.0",
+    "tweenjs": "^0.15.0"
   }
 }
