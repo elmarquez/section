@@ -18,10 +18,11 @@ var Section = function (elementId, model, options) {
         debug: false,
         defaultElement: {
             name: "element",
-            constructionPlane: 90,                   // degrees around the X axis
+            constructionPlane: 90, // degrees around the X axis
             height: 500, // only relevant if the element is unitized, otherwise default to model dimension
             width: 500, // only relevant if the element is unitized, otherwise default to model dimension
-            thickness: 10, // when -1, then fill the layer with the parent thickness?
+            thickness: 10,
+            maxLayerThickness: 1000,
             color: 0xcccccc,
             opacity: 1.0,
             material: null,
@@ -30,8 +31,10 @@ var Section = function (elementId, model, options) {
             offset: {top: 0, left: 0, bottom: 0, right: 0, front: 0, back: 0}
         },
         fps: 30,
+        minThickness: 5, // this is required because selection does not work properly when the layer is < 5mm
         selectedMaterialColor: 0xffff00,
         selectedMaterialOpacity: 0.2,
+        showLayerBoundingBox: false,
         showOriginMarker: true
     };
     instance.raycaster = new THREE.Raycaster();
@@ -83,38 +86,38 @@ var Section = function (elementId, model, options) {
     };
 
     /**
-     * Build the visualization by iteratively adding each assembly layer on top
-     * of the next, starting at the construction plane and working in the
-     * positive axis dimension.
+     * Build the visualization by iteratively adding each layer adjacent the
+     * next, starting at the construction plane and working outward along the
+     * positive Z axis.
      * @returns {THREE.Object3D}
      */
     this.build = function () {
         var group = new THREE.Object3D(), mesh, thickness = 0, totalThickness = 0;
-        // apply default values to model properties that have not been specified
-        instance.applyModelDefaults(instance.model, instance.options.defaultElement);
-        // add each assembly layer to the
-        instance.model.forEach(function (layer) {
-            // determine the layer thickness
+        // apply default values to model elements
+        instance.applyModelDefaults(instance.model.layers, instance.options.defaultElement);
+        // add each assembly layer to the scene
+        instance.model.layers.forEach(function (layer) {
+            // layer thickness is determined by the thickest element within the layer
             if (Array.isArray(layer)) {
-                // get the thickest element in the list
                 thickness = layer.reduce(function (last, current) {
                     return (last < current.thickness) ? current.thickness : last;
                 }, 0);
             } else {
                 thickness = layer.thickness;
             }
-            // if the thickness is 1mm or less, then set it to the minimum
-            // allowed thickness
-            thickness = (thickness < 5) ? 5 : thickness;
-            // create the layer mesh
+            // layer thickness must be greater than or equal to the minimum
+            thickness = (thickness < instance.options.minThickness) ? instance.options.minThickness : thickness;
+            // build the layer
             mesh = instance.buildLayer(layer);
             mesh.position.set(0, 0, totalThickness + (thickness / 2));
+            //mesh.position.set(0, 0, totalThickness);
             group.add(mesh);
             // update the total thickness
             totalThickness += thickness || 0;
         });
         // position the group at the center
         group.position.set(0, 0, 0);
+        // TODO orient the assembly as defined in the model options
         instance.scene.add(group);
     };
 
@@ -124,37 +127,34 @@ var Section = function (elementId, model, options) {
      * @returns {THREE.Object3D}
      */
     this.buildLayer = function (layer) {
-        var members = [], mesh;
+        var boundingBsp, boundingGeometry, boundingMesh, subassemblies = [];
         if (Array.isArray(layer)) {
+            // define maximum bounding volume for the assembly
+            boundingGeometry = new THREE.BoxGeometry(
+                instance.options.defaultElement.height,
+                instance.options.defaultElement.width,
+                instance.options.defaultElement.maxLayerThickness);
+            boundingMesh = new THREE.Mesh(boundingGeometry);
+            boundingBsp = new ThreeBSP(boundingMesh);
             // generate mesh for each layer subassembly
             layer.forEach(function (subassembly) {
-                members.push(instance.buildLayer(subassembly));
+                mesh = instance.buildLayer(subassembly);
+                mesh.position.set(
+                    -(mesh.userData.width / 2) + mesh.userData.offsetX,
+                    -(mesh.userData.height / 2) + mesh.userData.offsetY,
+                    0);
+                //mesh = instance.intersect(mesh, boundingBsp);
+                subassemblies.push(mesh);
             });
-            // boolean the subassemblies
-            // TODO
-            // clip the mesh to the boundary
-            //var bounding_geometry = new THREE.BoxGeometry(instance.options.defaultElement.height, instance.options.defaultElement.width, obj.thickness);
-            //var bounding_mesh = new THREE.Mesh(bounding_geometry);
-            //var cube_bsp = new ThreeBSP(bounding_mesh);
-            //var subtract_bsp = cube_bsp.subtract(sphere_bsp);
-            //var result = subtract_bsp.toMesh( new THREE.MeshLambertMaterial({ shading: THREE.SmoothShading, map: THREE.ImageUtils.loadTexture('texture.png') }) );
-            //result.geometry.computeVertexNormals();
-            //scene.add(result);
-            // group subassemblies
+            // group subassemblies into a layer object
             mesh = new THREE.Object3D();
-            members.forEach(function (member) {
-                if (member) {
-                    mesh.add(member);
-                }
+            subassemblies.forEach(function (subassembly) {
+                if (subassembly) mesh.add(subassembly);
             });
         } else if (layer.type === 'unit') {
             mesh = instance.createUnitizedMesh(layer);
         } else if (layer.type === 'frame') {
             //mesh = instance.createFrameMesh(layer);
-        } else if (layer.type === 'void') {
-            mesh = new THREE.Object3D();
-        } else {
-            // sheet or infill material
             mesh = instance.createUnitMesh(
                 layer.name,
                 instance.options.defaultElement.width,
@@ -162,24 +162,27 @@ var Section = function (elementId, model, options) {
                 layer.thickness - layer.offset.front - layer.offset.back,
                 layer.material
             );
-            // TODO offset positioning
+        } else if (layer.type === 'void') {
+            mesh = new THREE.Object3D();
+        } else if (layer.type === 'infill') {
+            mesh = new THREE.Object3D();
+        } else {
+            // sheet material
+            mesh = instance.createUnitMesh(
+                layer.name,
+                instance.options.defaultElement.width,
+                instance.options.defaultElement.height,
+                layer.thickness - layer.offset.front - layer.offset.back,
+                layer.material
+            );
         }
-        //// center the mesh in x and y
-        //var helper = new THREE.BoundingBoxHelper(mesh);
-        //try {
-        //    helper.update();
-        //    var x = (helper.box.max.x - helper.box.min.x) / 2;
-        //    var y = (helper.box.max.y - helper.box.min.y) / 2;
-        //    if (x === Infinity || x === -Infinity) {
-        //        x = 0;
-        //    }
-        //    if (y === Infinity || y === -Infinity) {
-        //        y = 0;
-        //    }
-        //    //mesh.position.set(x, y, 0);
-        //} catch (e) {
-        //    console.dir(e);
-        //}
+        mesh.name = layer.name || 'layer name';
+        // show mesh helper if debugging is enabled
+        if (instance.options.debug && instance.options.showLayerBoundingBox) {
+            var bbox = new THREE.BoundingBoxHelper(mesh, 0xff0000);
+            bbox.update();
+            instance.scene.add(bbox);
+        }
         return mesh;
     };
 
@@ -189,7 +192,7 @@ var Section = function (elementId, model, options) {
      * @returns {THREE.Mesh}
      */
     this.createUnitizedMesh = function (obj) {
-        var cols, geom = new THREE.Object3D(), i, j, rows, unit;
+        var cols, geometry = new THREE.Geometry(), i, j, material, mesh, rows, unit;
         // TODO there should be a configuration option for layout algorithm
         // lay the units out in an x, y grid
         rows = Math.ceil(instance.options.defaultElement.height / obj.height);
@@ -197,28 +200,28 @@ var Section = function (elementId, model, options) {
         if (instance.options.debug) console.log('cols %s rows %s', cols, rows);
         for (i = 0; i < rows; i++) {
             for (j = 0; j < cols; j++) {
-                unit = instance.createUnitMesh(obj.name,
+                unit = new THREE.BoxGeometry(
                     obj.width - obj.offset.left - obj.offset.right,
                     obj.height - obj.offset.top - obj.offset.bottom,
-                    obj.thickness - obj.offset.front - obj.offset.back,
-                    obj.material);
-                unit.position.x = j * obj.width;
-                unit.position.y = i * obj.height;
-                geom.add(unit);
+                    obj.thickness - obj.offset.front - obj.offset.back
+                );
+                var v = new THREE.Vector3(j * obj.width, i * obj.height, 0);
+                var m = new THREE.Matrix4();
+                m.setPosition(v);
+                geometry.merge(unit, m);
             }
         }
-        // TODO merge the mesh into a single object
-        // center the unit mesh
-        geom.position.set(
-            -(cols * obj.width / 2) + (obj.width * 0.5),
-            -(rows * obj.height / 2) + (obj.height * 0.5),
-            0);
-        if (instance.options.debug) {
-            var bbox = new THREE.BoundingBoxHelper(geom, 0xff0000);
-            bbox.update();
-            instance.scene.add(bbox);
-        }
-        return geom;
+        material = instance.getMaterial(obj.material);
+        geometry.computeFaceNormals();
+        geometry.computeVertexNormals();
+        // merge the geometry into a single mesh object
+        mesh = new THREE.Mesh(geometry, material);
+        mesh.userData.name = obj.name;
+        mesh.userData.offsetX = obj.width / 2;
+        mesh.userData.offsetY = obj.height / 2;
+        mesh.userData.height = rows * obj.height;
+        mesh.userData.width = cols * obj.width;
+        return mesh;
     };
 
     /**
@@ -267,7 +270,7 @@ var Section = function (elementId, model, options) {
         }
         return new THREE.MeshLambertMaterial({
             color: material.color,
-            transparent: true, // item.transparent || item.opacity < 1 ? true : false,
+            transparent: true,
             opacity: material.opacity || 1.0
         });
     };
@@ -296,7 +299,7 @@ var Section = function (elementId, model, options) {
         // Create a camera, zoom it out from the model a bit, and add it to the scene.
         instance.camera = new THREE.PerspectiveCamera(30, instance.width / instance.height, 0.1, 10000);
         instance.camera.lookAt(0, 0, 0);
-        instance.camera.position.set(1000, 1000, 200);
+        instance.camera.position.set(1000, 1000, 1000);
         instance.scene.add(instance.camera);
 
         // Create a light, set its position, and add it to the scene.
@@ -322,6 +325,45 @@ var Section = function (elementId, model, options) {
 
         // Add OrbitControls so that we can pan around with the mouse.
         instance.controls = new THREE.OrbitControls(instance.camera, instance.renderer.domElement);
+    };
+
+    /**
+     * Return the intersection of the object and the BSP.
+     * @param obj
+     * @param bsp
+     * @returns {*}
+     */
+    this.intersect = function (obj, bsp) {
+        var intersectionBsp, mesh, objBsp, result;
+        if (obj instanceof THREE.Mesh) {
+            objBsp = new ThreeBSP(obj);
+            intersectionBsp = bsp.intersect(objBsp);
+            //result = intersectionBsp.toMesh(obj.material);
+            result = new THREE.Mesh(intersectionBsp.toGeometry(), obj.material);
+            result.geometry.computeFaceNormals();
+            result.geometry.computeVertexNormals();
+        } else {
+            result = new THREE.Object3D();
+            if (!obj) {
+                console.dir(obj);
+            } else {
+                obj.children.forEach(function(child) {
+                    if (child) {
+                        mesh = instance.intersect(child, bsp);
+                        result.add(mesh);
+                    }
+                });
+            }
+        }
+        result.position.set(
+            obj.position.getComponent(0),
+            obj.position.getComponent(1),
+            obj.position.getComponent(2)
+        );
+        var p1 = JSON.stringify(obj.position);
+        var p2 = JSON.stringify(result.position);
+        console.log('%s : %s', p1, p2);
+        return result;
     };
 
     /**
