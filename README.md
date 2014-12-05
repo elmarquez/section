@@ -1,18 +1,21 @@
 Threejs-Section
 ===============
 
-Section is a library that makes it easy to generate 3D visualizations
-of typical building wall, floor and roof assemblies. Define your building
-assembly in a JSON object or file using a simple format. Section will then
-generate the 3D model for you automatically and provide you with a variety of
-functions that support interaction and connection of the model to other
-resources.
+Section makes it easy to generate 3D visualizations of typical building wall,
+floor and roof assemblies.
 
-Threejs-section requires an HTML5 compatible browser and the following third
+Define your building assembly in a JSON object or file using the format
+described below. Section will generate and render the 3D model for you
+automatically, and provide you with various ways of interacting with the model.
+
+threejs-section requires an HTML5 compatible browser and the following third
 party libraries:
 
   * threejs
   * threejs-csg
+
+Stable releases are tagged following the Semantic Versioning standard. All
+other commits should be treated as non-stable.
 
 [![Build Status](https://travis-ci.org/elmarquez/section.svg?branch=master)](https://travis-ci.org/elmarquez/section)
 
@@ -32,23 +35,39 @@ Notes forthcoming.
 Examples
 --------
 
-See the test/fixtures folder for current examples. Use Grunt Connect to run the
-examples locally:
+A number of examples are available inside the /examples folder. To run these
+examples you will first need to download and install all development
+dependencies, as describing below in the Development section. Once you have
+installed the dependencies, start the development web server in the examples
+folder as follows:
 
-    grunt connect::keepalive
+    grunt connect::examples::keepalive
 
-This will start a web server in the examples folder. Open a browser and
-navigate to http://localhost:8888
+Open a browser and navigate to http://localhost:8888
 
 
 Development
 -----------
 
-Development tooling requires the following:
+To build the library or run the examples, you will need to install the
+following build dependencies:
 
-  * nodejs
-  * grunt
-  * bower
+  * nodejs - http://www.nodejs.org
+  * grunt - http://www.gruntjs.com
+  * bower - http://www.bower.io
+
+Install Nodejs first, then install Grunt and Bower globally as follows:
+
+    npm install -g grunt grunt-cli
+    npm install -g bower
+
+Once you've installed the build dependencies, download and install all
+library dependencies as follows:
+
+    npm install
+    bower install
+
+Type `grunt` inside the project folder to see the list of build commands.
 
 
 License

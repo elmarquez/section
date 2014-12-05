@@ -11,7 +11,7 @@ module.exports = {
   main: {
     options: {
       filter: 'include',
-      tasks: ['availabletasks', 'compile', 'test']
+      tasks: ['availabletasks', 'build', 'install', 'test']
     }
   }
 };
