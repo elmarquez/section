@@ -41,7 +41,7 @@ dependencies, as describing below in the Development section. Once you have
 installed the dependencies, start the development web server in the examples
 folder as follows:
 
-    grunt connect::examples::keepalive
+    grunt connect::keepalive
 
 Open a browser and navigate to http://localhost:8888
 
