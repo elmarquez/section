@@ -27,17 +27,17 @@ var Section = function (elementId, model, options) {
             opacity: 1.0,
             material: null,
             transparency: 1.0,
-            type: "sheet", // sheet, unit, frame
+            type: "sheet", // sheet, unit, frame, infill, void
             offset: {top: 0, left: 0, bottom: 0, right: 0, front: 0, back: 0}
         },
-        enableSelection: false,
+        enableSelection: true,
         fps: 30,
         minThickness: 5, // this is required because selection does not work properly when the layer is < 5mm
         selectedMaterialColor: 0xffff00,
         selectedMaterialOpacity: 0.2,
-        showAssemblyBoundingBox: true,
-        showLayerBoundingBox: true,
-        showOriginMarker: true
+        showAssemblyBoundingBox: false,
+        showLayerBoundingBox: false,
+        showOriginMarker: false
     };
     instance.raycaster = new THREE.Raycaster();
     instance.scene = null;
@@ -45,8 +45,8 @@ var Section = function (elementId, model, options) {
     instance.unselectedOpacity = 0.2;
     instance.viewport = document.getElementById(elementId);
 
-    instance.height = instance.viewport.clientHeight;
-    instance.width = instance.viewport.clientWidth;
+    instance.viewportHeight = instance.viewport.clientHeight;
+    instance.viewportWidth = instance.viewport.clientWidth;
 
     // override default options
     if (options) {
@@ -182,16 +182,19 @@ var Section = function (elementId, model, options) {
         } else if (layer.type === 'unit') {
             mesh = instance.createUnitizedMesh(layer);
         } else if (layer.type === 'frame') {
-            //mesh = instance.createFrameMesh(layer);
             mesh = instance.createUnitMesh(
                 layer.name,
-                instance.options.defaultElement.width,
+                layer.width, // assumes that its a vertical frame
                 instance.options.defaultElement.height,
                 layer.thickness - layer.offset.front - layer.offset.back,
                 layer.material
             );
         } else if (layer.type === 'void') {
-            material = new THREE.MeshLambertMaterial({ color: 0x9999ff, transparent: true, opacity: 0.1 });
+            material = new THREE.MeshLambertMaterial({
+                color: layer.material.color || 0x000000,
+                transparent: layer.material.transparent || true,
+                opacity: layer.material.opacity || 0.0
+            });
             mesh = instance.createUnitMesh(
                 layer.name,
                 instance.options.defaultElement.width,
@@ -243,6 +246,8 @@ var Section = function (elementId, model, options) {
         geometry.computeVertexNormals();
         // merge the geometry into a single mesh object
         mesh = new THREE.Mesh(geometry, material);
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
         mesh.userData.name = obj.name;
         mesh.userData.offsetX = obj.width / 2;
         mesh.userData.offsetY = obj.height / 2;
@@ -265,6 +270,8 @@ var Section = function (elementId, model, options) {
         geom = new THREE.BoxGeometry(width, height, thickness);
         mat = (material instanceof THREE.Material) ? material : instance.getMaterial(material);
         mesh = new THREE.Mesh(geom, mat);
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
         mesh.userData.name = name;
         mesh.userData.offsetX = width / 2;
         mesh.userData.offsetY = height / 2;
@@ -294,7 +301,11 @@ var Section = function (elementId, model, options) {
         if (material && material.texture) {
             try {
                 texture = THREE.ImageUtils.loadTexture(material.texture);
-                return new THREE.MeshBasicMaterial({map: texture, side: THREE.DoubleSide});
+                return new THREE.MeshBasicMaterial({
+                    map: texture,
+                    side: THREE.DoubleSide,
+                    transparent: material.transparent || true,
+                    opacity: material.opacity || 1 });
             } catch (e) {
                 console.log("ERROR: Could not load material %s", material.texture);
             }
@@ -312,7 +323,9 @@ var Section = function (elementId, model, options) {
 
         // Create a renderer and add it to the DOM.
         instance.renderer = new THREE.WebGLRenderer({antialias: true});
-        instance.renderer.setSize(instance.width, instance.height);
+        instance.renderer.setSize(instance.viewportWidth, instance.viewportHeight);
+        instance.renderer.shadowMapEnabled = true;
+        instance.renderer.shadowMapType = THREE.PCFSoftShadowMap;
         instance.viewport.appendChild(instance.renderer.domElement);
 
         // Set the background color of the scene.
@@ -320,26 +333,36 @@ var Section = function (elementId, model, options) {
 
         // Resize the renderer when the browser window resizes
         window.addEventListener('resize', function () {
-            instance.height = instance.viewport.clientHeight;
-            instance.width = instance.viewport.clientWidth;
-            instance.renderer.setSize(instance.width, instance.height);
-            instance.camera.aspect = instance.width / instance.height;
+            instance.viewportHeight = instance.viewport.clientHeight;
+            instance.viewportWidth = instance.viewport.clientWidth;
+            instance.renderer.setSize(instance.viewportWidth, instance.viewportHeight);
+            instance.camera.aspect = instance.viewportWidth / instance.viewportHeight;
             instance.camera.updateProjectionMatrix();
         });
 
         // Create a camera, zoom it out from the model a bit, and add it to the scene.
-        instance.camera = new THREE.PerspectiveCamera(30, instance.width / instance.height, 0.1, 10000);
-        instance.camera.lookAt(0, 0, 0);
-        instance.camera.position.set(1000, 1000, 1000);
+        instance.camera = new THREE.PerspectiveCamera(30,
+            instance.viewportWidth / instance.viewportHeight,
+            0.1,
+            10000);
+        instance.camera.position.set(
+            instance.options.defaultElement.width * 2,
+            instance.options.defaultElement.height,
+            instance.options.defaultElement.width * 2);
+        instance.camera.lookAt(0, instance.options.defaultElement.height, 0);
         instance.scene.add(instance.camera);
 
         // Create a light, set its position, and add it to the scene.
         var light1 = new THREE.PointLight(0xaaaaaa);
+        //light1.castShadow = true;
         light1.position.set(-200, 300, -200);
+        //light1.shadowDarkness = 0.2;
         instance.scene.add(light1);
 
         var light2 = new THREE.PointLight(0xffffff);
+        //light2.castShadow = true;
         light2.position.set(200, 300, 200);
+        //light2.shadowDarkness = 0.2;
         instance.scene.add(light2);
 
         // origin marker

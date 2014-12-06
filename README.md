@@ -74,3 +74,20 @@ License
 -------
 
 Please see the LICENSE file for copyright and license information.
+
+
+To Do
+-----
+
+The following features are planned:
+
+  * Frame layout
+  * Mouse over assembly layer or element initiates animated fade out of other elements
+  * Provide event hooks into Section to select elements from external code
+  * Angular.js example showing integration with a table listing of the assembly elements
+  * Demo page
+  * Various layout algorithms for unitized materials
+  * Add lighting with shadows
+  * Center view orbit on model center
+  * Annotations
+  * View aids: rulers, grids
