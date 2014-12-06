@@ -2,28 +2,15 @@
  * List the available Grunt tasks in this repository.
  */
 module.exports = {
-  src: {
+  dist: {
     cwd: 'src',
-    dest: 'dist/js',
+    dest: 'dist/',
     expand: true,
-    src: [ '**/*' ]
+    src: [ '**/*.js' ]
   },
-  fixtures: {
-    cwd: 'test/fixtures/textures',
-    dest: 'dist/textures',
-    expand: true,
-    src: [ '**/*' ]
-  },
-  html: {
-    cwd: 'test/fixtures',
-    dest: 'dist',
-    expand: true,
-    src: [ 'index.html', 'OrbitControls.js' ]
-  },
-  vendor: {
-    cwd: 'vendor',
-    dest: 'dist/vendor',
-    expand: true,
-    src: [ '**/*' ]
+  examples: {
+    dest: 'examples/',
+    expand: false,
+    src: [ 'src/**/*.js', 'vendor/**/*.js' ]
   }
 };

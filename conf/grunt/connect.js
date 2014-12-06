@@ -2,10 +2,10 @@
  * List the available Grunt tasks in this repository.
  */
 module.exports = {
-  dist: {
+  examples: {
     options: {
       port: 8888,
-      base: 'dist'
+      base: 'examples'
     }
   }
 };
