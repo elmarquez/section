@@ -22,7 +22,6 @@
   ],
   "dependencies": {
     "ThreeCSG": "git@github.com:elmarquez/ThreeCSG.git",
-    "threejs": "^0.69.0",
-    "tweenjs": "^0.15.0"
+    "threejs": "^0.69.0"
   }
 }
