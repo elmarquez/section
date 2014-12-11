@@ -14,114 +14,116 @@
     </style>
     <script type="text/javascript" src="vendor/ThreeCSG/dist/ThreeCSG.js"></script>
     <script type="text/javascript" src="vendor/threejs/build/three.js"></script>
-    <script type="text/javascript" src="vendor/tweenjs/build/tween.min.js"></script>
-    <!--<script type="text/javascript" src="vendor/OpenJSCAD.org/csg.js"></script>-->
-    <!--<script type="text/javascript" src="vendor/OpenJSCAD.org/openjscad.js"></script>-->
+    <script type="text/javascript" src="Detector.js"></script>
     <script type="text/javascript" src="OrbitControls.js"></script>
-    <script type="text/javascript" src="js/section.js"></script>
+    <script type="text/javascript" src="src/section.js"></script>
 </head>
 <body>
 <div id="viewport"></div>
 <script type="text/javascript">
     // define the model to be built
-    var model = [
-        [
-            {
-                name: "brick",
-                type: "unit",
-                height: 76,
-                width: 230,
-                thickness: 110,
-                material: {
-                    color: 0xffff00,
-                    texture: 'textures/brick-standard-red.jpg',
+    var model = {
+        options: {},
+        layers: [
+            [
+                {
+                    name: "brick",
+                    type: "unit",
+                    height: 76,
+                    width: 230,
+                    thickness: 110,
+                    material: {
+                        color: 0xffff00,
+                        texture: 'textures/brick-standard-red.jpg'
+                    },
+                    // top, left, bottom, right, front, back
+                    offset: {
+                        top: 0,
+                        left: 10,
+                        bottom: 10,
+                        right: 0,
+                        front: 5,
+                        back: 0
+                    }
                 },
-                // top, left, bottom, right, front, back
-                offset: {
-                    top: 0,
-                    left: 10,
-                    bottom: 10,
-                    right: 0,
-                    front: 5,
-                    back: 0
+                {
+                    name: "mortar",
+                    type: 'infill',
+                    thickness: 110,
+                    material: {
+                        color: 0xeaeaea,
+                        texture: 'textures/concrete.jpg'
+                    },
+                    offset: {
+                        top: 0,
+                        left: 0,
+                        bottom: 0,
+                        right: 0,
+                        front: 10,
+                        back: 10
+                    }
                 }
-            },
+            ],
             {
-                name: "mortar",
-                type: 'infill',
-                thickness: 110,
+                name: "air gap",
+                type: 'void',
+                thickness: 25,
                 material: {
-                    color: 0xeaeaea,
-                    texture: 'textures/concrete.jpg'
-                },
-                offset: {
-                    top: 0,
-                    left: 0,
-                    bottom: 0,
-                    right: 0,
-                    front: 10,
-                    back: 10
-                }
-            }
-        ],
-        {
-            name: "air gap",
-            type: 'void',
-            thickness: 25,
-            material: {
-                color: 0xefefef,
-                opacity: 0.01,
-                transparent: true
-            }
-        },
-        {
-            name: "building wrap",
-            thickness: 1,
-            material: {
-                color: 0x888888,
-                texture: 'textures/tyvek.jpg'
-            }
-        },
-        {
-            name: "sheathing",
-            thickness: 14,
-            material: {
-                color: 0x0000ff,
-                texture: 'textures/plywood-douglas-fir.jpg'
-            }
-        },
-        [
-            {
-                name: "wood stud",
-                type: "frame",
-                width: 38,
-                thickness: 89,
-                material: {
-                    color: 0xcccccc,
-                    texture: 'textures/lumber-douglas-fir.jpg'
-                }
-            },
-            {
-                name: "insulation",
-                type: 'infill',
-                thickness: 89,
-                material: {
-                    color: 0xcccccc,
-                    opacity: 0.7,
-                    texture: 'textures/insulation-batt-pink.jpg',
+                    color: 0x000000,
+                    opacity: 0.0,
                     transparent: true
                 }
+            },
+            {
+                name: "building wrap",
+                thickness: 1,
+                material: {
+                    color: 0x888888,
+                    texture: 'textures/tyvek.jpg'
+                }
+            },
+            {
+                name: "sheathing",
+                thickness: 14,
+                material: {
+                    color: 0x0000ff,
+                    texture: 'textures/plywood-douglas-fir.jpg'
+                }
+            },
+            [
+                {
+                    name: "wood stud",
+                    type: "frame",
+                    width: 38,
+                    thickness: 89,
+                    material: {
+                        color: 0xcccccc,
+                        texture: 'textures/lumber-douglas-fir.jpg'
+                    },
+                    center: 372
+                },
+                {
+                    name: "insulation",
+                    type: 'infill',
+                    thickness: 89,
+                    material: {
+                        color: 0xffc0cb,
+                        opacity: 1.0,
+                        texture: 'textures/insulation-batt-pink.jpg',
+                        transparent: true
+                    }
+                }
+            ],
+            {
+                name: "plasterboard",
+                thickness: 10,
+                material: {
+                    color: 0x0000ff,
+                    texture: 'textures/plasterboard.jpg'
+                }
             }
-        ],
-        {
-            name: "plasterboard",
-            thickness: 10,
-            material: {
-                color: 0x0000ff,
-                texture: 'textures/plasterboard.jpg'
-            }
-        }
-    ];
+        ]
+    };
     // create visualization
     var section = new Section("viewport", model, {debug: true});
     section.build();

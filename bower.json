@@ -1,7 +1,7 @@
 {
   "name": "section",
   "description": "A library for generating 3D visualizations of typical building wall, floor and roof assemblies",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "homepage": "https://github.com/elmarquez/section",
   "authors": [
     {
@@ -28,7 +28,7 @@
   ],
   "dependencies": {
     "ThreeCSG": "git@github.com:elmarquez/ThreeCSG.git",
-    "threejs": "0.69.0"
+    "threejs": "git@github.com:mrdoob/three.js.git#r69"
   },
   "keywords": [
     "3D",
