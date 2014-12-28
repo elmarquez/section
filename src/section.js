@@ -75,10 +75,10 @@ var Section = function (elementId, model, options) {
      * @param model Model
      * @param defaults Model element default values
      */
-    this.applyModelDefaults = function (model, defaults) {
+    this.applyLayerDefaults = function (model, defaults) {
         if (Array.isArray(model)) {
             model.forEach(function (element) {
-                instance.applyModelDefaults(element, defaults);
+                instance.applyLayerDefaults(element, defaults);
             });
         } else {
             Object.keys(defaults).forEach(function (key) {
@@ -96,34 +96,36 @@ var Section = function (elementId, model, options) {
     this.build = function () {
         var group = new THREE.Object3D(), mesh, thickness = 0, z = -0.0;
         // apply default values to model elements
-        // FIXME maybe we shouldn't do this for thickness value!
-        instance.applyModelDefaults(instance.model.layers, instance.options.defaultElement);
-        // add each assembly layer to the scene
-        instance.model.layers.forEach(function (layer) {
-            // the thickness of a layer is determined by the thickest element
-            // within the layer
-            if (Array.isArray(layer)) {
-                thickness = layer.reduce(function (last, current) {
-                    return (current.thickness > last) ? current.thickness : last;
-                }, 0);
-            } else {
-                thickness = layer.thickness;
-            }
-            // layer thickness must be greater than or equal to the minimum
-            thickness = (thickness < instance.options.minThickness) ? instance.options.minThickness : thickness;
-            // build the layer
-            mesh = instance.buildLayer(layer);
-            z += thickness / 2.0;
-            mesh.position.set(0, 0, z);
-            z += thickness / 2.0;
-            group.add(mesh);
-            // display the layer bounding box
-            if (instance.options.showLayerBoundingBox) {
-                var bbox = new THREE.BoundingBoxHelper(mesh, 0xff0000);
-                bbox.update();
-                instance.scene.add(bbox);
-            }
-        });
+        if (instance.model && instance.model.layers) {
+            // FIXME maybe we shouldn't do this for thickness value!
+            instance.applyLayerDefaults(instance.model.layers, instance.options.defaultElement);
+            // add each assembly layer to the scene
+            instance.model.layers.forEach(function (layer) {
+                // the thickness of a layer is determined by the thickest element
+                // within the layer
+                if (Array.isArray(layer)) {
+                    thickness = layer.reduce(function (last, current) {
+                        return (current.thickness > last) ? current.thickness : last;
+                    }, 0);
+                } else {
+                    thickness = layer.thickness;
+                }
+                // layer thickness must be greater than or equal to the minimum
+                thickness = (thickness < instance.options.minThickness) ? instance.options.minThickness : thickness;
+                // build the layer
+                mesh = instance.buildLayer(layer);
+                z += thickness / 2.0;
+                mesh.position.set(0, 0, z);
+                z += thickness / 2.0;
+                group.add(mesh);
+                // display the layer bounding box
+                if (instance.options.showLayerBoundingBox) {
+                    var bbox = new THREE.BoundingBoxHelper(mesh, 0xff0000);
+                    bbox.update();
+                    instance.scene.add(bbox);
+                }
+            });
+        }
         // position the group at the center
         group.position.set(0, 0, 0);
         // TODO orient the assembly as defined in the model options
